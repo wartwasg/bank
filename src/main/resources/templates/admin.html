@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - SecureBank</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            color: #333;
+        }
+
+        .menu-toggle {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 2000;
+            width: 45px;
+            height: 45px;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle:hover {
+            background: #f8fafc;
+        }
+
+        .menu-toggle span {
+            width: 22px;
+            height: 2px;
+            background: #2563eb;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            padding: 5rem 0 2rem 0;
+            z-index: 999;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-260px);
+        }
+
+        .sidebar-logo {
+            padding: 0 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .sidebar-logo .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-logo .logo-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: white;
+        }
+
+        .sidebar-logo h2 {
+            color: #2563eb;
+            font-size: 1.8rem;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            text-decoration: none;
+            color: #64748b;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-menu a:hover {
+            background: #f8fafc;
+            color: #2563eb;
+        }
+
+        .sidebar-menu a.active {
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, transparent 100%);
+            color: #2563eb;
+            border-left: 3px solid #2563eb;
+        }
+
+        .sidebar-menu a:hover svg {
+            stroke: #2563eb;
+        }
+
+        .sidebar-menu a.active svg {
+            stroke: #2563eb;
+        }
+
+        .sidebar-menu svg {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            stroke: #64748b;
+            transition: stroke 0.3s ease;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 2rem;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+
+        .header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: #1e293b;
+            font-size: 1.8rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .header p {
+            color: #64748b;
+        }
+
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.8rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            animation: slideUp 0.6s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon.users {
+            background: #dbeafe;
+        }
+
+        .stat-icon.users svg {
+            stroke: #2563eb;
+        }
+
+        .stat-icon.transactions {
+            background: #d1fae5;
+        }
+
+        .stat-icon.transactions svg {
+            stroke: #10b981;
+        }
+
+        .stat-icon.pending {
+            background: #fef3c7;
+        }
+
+        .stat-icon.pending svg {
+            stroke: #f59e0b;
+        }
+
+        .stat-icon.revenue {
+            background: #e9d5ff;
+        }
+
+        .stat-icon.revenue svg {
+            stroke: #8b5cf6;
+        }
+
+        .stat-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .stat-card h3 {
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .stat-change {
+            font-size: 0.85rem;
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .stat-change svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #e2e8f0;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            color: #64748b;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            color: #2563eb;
+        }
+
+        .tab.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+
+        .data-table {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-header h2 {
+            color: #1e293b;
+            font-size: 1.3rem;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .search-box svg {
+            width: 18px;
+            height: 18px;
+            stroke: #64748b;
+        }
+
+        .search-box input {
+            border: none;
+            background: none;
+            outline: none;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-small svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-add {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-add svg {
+            stroke: white;
+        }
+
+        .btn-add:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+        }
+
+        .btn-export {
+            background: white;
+            color: #64748b;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-export svg {
+            stroke: #64748b;
+        }
+
+        .btn-export:hover {
+            border-color: #cbd5e1;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8fafc;
+        }
+
+        th {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-badge svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .status-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-active svg {
+            stroke: #065f46;
+        }
+
+        .status-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-inactive svg {
+            stroke: #991b1b;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-pending svg {
+            stroke: #92400e;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .action-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .btn-edit {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .btn-edit svg {
+            stroke: #1e40af;
+        }
+
+        .btn-edit:hover {
+            background: #bfdbfe;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .btn-delete svg {
+            stroke: #991b1b;
+        }
+
+        .btn-delete:hover {
+            background: #fecaca;
+        }
+
+        .btn-view {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-view svg {
+            stroke: #374151;
+        }
+
+        .btn-view:hover {
+            background: #e5e7eb;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-260px);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 5rem 1rem 1rem 1rem;
+            }
+
+            .admin-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .table-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                max-width: 100%;
+            }
+
+            .stat-value {
+                font-size: 1.7rem;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.8rem;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .sidebar-overlay {
+                display: none;
+            }
+        }
+
+        .footer {
+            background: white;
+            margin-top: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            padding: 2.5rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .footer-section h3 {
+            color: #2563eb;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section h4 {
+            color: #1e293b;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .footer-section p {
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 0.6rem;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .footer-section ul li a {
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section ul li a:hover {
+            color: #2563eb;
+        }
+
+        .footer-bottom {
+            background: #f8fafc;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-bottom p {
+            color: #64748b;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .footer-security {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #10b981 !important;
+            font-weight: 500;
+        }
+
+        .footer-security svg {
+            width: 16px;
+            height: 16px;
+            stroke: #10b981;
+        }
+
+        @media (max-width: 768px) {
+            .footer-content {
+                grid-template-columns: 1fr;
+                padding: 2rem 1.5rem;
+                gap: 1.5rem;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+                padding: 1.5rem 1rem;
+            }
+
+            .footer-security {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<button class="menu-toggle" onclick="toggleSidebar()">
+    <span></span>
+    <span></span>
+    <span></span>
+</button>
+
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                <path d="M9 22V12h6v10"></path>
+            </svg>
+        </div>
+        <h2>SecureBank</h2>
+    </div>
+    <ul class="sidebar-menu">
+        <li>
+            <a th:href="@{/dashboard}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                    <path d="M9 22V12h6v10"></path>
+                </svg>
+                <span>Dashboard</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/transfer}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
+                </svg>
+                <span>Transfer</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/deposit}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 8v8M8 12h8"></path>
+                </svg>
+                <span>Deposit</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/withdraw}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M8 12h8"></path>
+                </svg>
+                <span>Withdraw</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/admin}" class="active">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+                <span>Admin Panel</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/logout}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path>
+                </svg>
+                <span>Logout</span>
+            </a>
+        </li>
+    </ul>
+</aside>
+
+<main class="main-content">
+    <div class="header">
+        <h1>Admin Panel</h1>
+        <p>Manage users, transactions, and system settings</p>
+    </div>
+
+    <div class="admin-stats">
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <h3>Total Users</h3>
+                <div class="stat-icon users">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="stat-value">12,845</div>
+            <div class="stat-change">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+                +245 this month
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <h3>Total Transactions</h3>
+                <div class="stat-icon transactions">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="stat-value">45,392</div>
+            <div class="stat-change">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+                +1,284 today
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <h3>Pending Approvals</h3>
+                <div class="stat-icon pending">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 6v6l4 2"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="stat-value">127</div>
+            <div class="stat-change" style="color: #f59e0b;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                Requires attention
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <h3>Total Revenue</h3>
+                <div class="stat-icon revenue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                    </svg>
+                </div>
+            </div>
+            <div class="stat-value">$2.4M</div>
+            <div class="stat-change">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+                +18.5% this quarter
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active">Users Management</button>
+        <button class="tab">Transactions</button>
+        <button class="tab">Reports</button>
+        <button class="tab">Settings</button>
+    </div>
+
+    <div class="data-table">
+        <div class="table-header">
+            <h2>All Users</h2>
+            <div class="table-actions">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="M21 21l-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" placeholder="Search users...">
+                </div>
+                <button class="btn-small btn-export">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
+                    </svg>
+                    Export
+                </button>
+                <button class="btn-small btn-add">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 8v8M8 12h8"></path>
+                    </svg>
+                    Add User
+                </button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Account Type</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>#USR-001234</td>
+                    <td>John Doe</td>
+                    <td>john.doe@example.com</td>
+                    <td>Personal</td>
+                    <td>$45,250.00</td>
+                    <td>
+                                <span class="status-badge status-active">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path>
+                                        <path d="M22 4L12 14.01l-3-3"></path>
+                                    </svg>
+                                    Active
+                                </span>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-btn btn-view">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                View
+                            </button>
+                            <button class="action-btn btn-edit">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Edit
+                            </button>
+                            <button class="action-btn btn-delete">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>#USR-001236</td>
+                    <td>Michael Chen</td>
+                    <td>m.chen@example.com</td>
+                    <td>Savings</td>
+                    <td>$67,890.00</td>
+                    <td>
+                                <span class="status-badge status-active">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path>
+                                        <path d="M22 4L12 14.01l-3-3"></path>
+                                    </svg>
+                                    Active
+                                </span>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-btn btn-view">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                View
+                            </button>
+                            <button class="action-btn btn-edit">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Edit
+                            </button>
+                            <button class="action-btn btn-delete">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>#USR-001237</td>
+                    <td>Emily Davis</td>
+                    <td>emily.davis@example.com</td>
+                    <td>Personal</td>
+                    <td>$12,340.00</td>
+                    <td>
+                                <span class="status-badge status-pending">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <path d="M12 6v6l4 2"></path>
+                                    </svg>
+                                    Pending
+                                </span>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-btn btn-view">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                View
+                            </button>
+                            <button class="action-btn btn-edit">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Edit
+                            </button>
+                            <button class="action-btn btn-delete">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>#USR-001238</td>
+                    <td>James Wilson</td>
+                    <td>james.w@example.com</td>
+                    <td>Business</td>
+                    <td>$89,560.00</td>
+                    <td>
+                                <span class="status-badge status-inactive">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                                    </svg>
+                                    Inactive
+                                </span>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-btn btn-view">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                View
+                            </button>
+                            <button class="action-btn btn-edit">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Edit
+                            </button>
+                            <button class="action-btn btn-delete">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>SecureBank Admin</h3>
+                <p>Professional banking management system</p>
+            </div>
+            <div class="footer-section">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="#">Documentation</a></li>
+                    <li><a href="#">Support</a></li>
+                    <li><a href="#">API Reference</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Contact</h4>
+                <ul>
+                    <li>Email: admin@securebank.com</li>
+                    <li>Phone: +1 (555) 123-4567</li>
+                    <li>Available 24/7</li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Terms of Service</a></li>
+                    <li><a href="#">Compliance</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 SecureBank. All rights reserved. | Version 2.5.1</p>
+            <p class="footer-security">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0110 0v4"></path>
+                </svg>
+                Secured by 256-bit SSL encryption
+            </p>
+        </div>
+    </footer>
+</main>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        const toggle = document.querySelector('.menu-toggle');
+        const mainContent = document.querySelector('.main-content');
+
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        toggle.classList.toggle('active');
+
+        if (window.innerWidth > 768) {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+    }
+
+    document.querySelectorAll('.sidebar-menu a').forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdraw Money - SecureBank</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            color: #333;
+        }
+
+        .menu-toggle {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 2000;
+            width: 45px;
+            height: 45px;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle:hover {
+            background: #f8fafc;
+        }
+
+        .menu-toggle span {
+            width: 22px;
+            height: 2px;
+            background: #2563eb;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            padding: 5rem 0 2rem 0;
+            z-index: 999;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-260px);
+        }
+
+        .sidebar-logo {
+            padding: 0 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .sidebar-logo .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-logo .logo-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: white;
+        }
+
+        .sidebar-logo h2 {
+            color: #2563eb;
+            font-size: 1.8rem;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            text-decoration: none;
+            color: #64748b;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-menu a:hover {
+            background: #f8fafc;
+            color: #2563eb;
+        }
+
+        .sidebar-menu a.active {
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, transparent 100%);
+            color: #2563eb;
+            border-left: 3px solid #2563eb;
+        }
+
+        .sidebar-menu a:hover svg {
+            stroke: #2563eb;
+        }
+
+        .sidebar-menu a.active svg {
+            stroke: #2563eb;
+        }
+
+        .sidebar-menu svg {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            stroke: #64748b;
+            transition: stroke 0.3s ease;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 2rem;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+
+        .header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: #1e293b;
+            font-size: 1.8rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .header p {
+            color: #64748b;
+        }
+
+        .withdraw-container {
+            max-width: 800px;
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            animation: fadeIn 0.6s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .balance-display {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .balance-display h3 {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .balance-display .amount {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .withdraw-methods h2 {
+            color: #1e293b;
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .method-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .method-card {
+            padding: 1.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .method-card:hover {
+            border-color: #f59e0b;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(245, 158, 11, 0.15);
+        }
+
+        .method-card.active {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .method-icon {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .method-card.active .method-icon {
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .method-icon svg {
+            width: 26px;
+            height: 26px;
+            stroke: #64748b;
+            transition: stroke 0.3s ease;
+        }
+
+        .method-card.active .method-icon svg {
+            stroke: #f59e0b;
+        }
+
+        .method-card:hover .method-icon svg {
+            stroke: #f59e0b;
+        }
+
+        .method-card h3 {
+            color: #1e293b;
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .method-card p {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .warning-box p {
+            color: #92400e;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .form-section h2 {
+            color: #1e293b;
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .quick-amounts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .quick-amount-btn {
+            padding: 0.8rem;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            color: #1e293b;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quick-amount-btn:hover {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #334155;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.9rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #64748b;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-260px);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 5rem 1rem 1rem 1rem;
+            }
+
+            .withdraw-container {
+                padding: 1.5rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .method-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-amounts {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .sidebar-overlay {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<button class="menu-toggle" onclick="toggleSidebar()">
+    <span></span>
+    <span></span>
+    <span></span>
+</button>
+
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                <path d="M9 22V12h6v10"></path>
+            </svg>
+        </div>
+        <h2>SecureBank</h2>
+    </div>
+    <ul class="sidebar-menu">
+        <li>
+            <a th:href="@{/dashboard}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                    <path d="M9 22V12h6v10"></path>
+                </svg>
+                <span>Dashboard</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/transfer}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
+                </svg>
+                <span>Transfer</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/deposit}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 8v8M8 12h8"></path>
+                </svg>
+                <span>Deposit</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/withdraw}" class="active">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M8 12h8"></path>
+                </svg>
+                <span>Withdraw</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/admin}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+                <span>Admin Panel</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/logout}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path>
+                </svg>
+                <span>Logout</span>
+            </a>
+        </li>
+    </ul>
+</aside>
+
+<main class="main-content">
+    <div class="header">
+        <h1>Withdraw Money</h1>
+        <p>Withdraw funds from your account</p>
+    </div>
+
+    <div class="withdraw-container">
+        <div class="balance-display">
+            <h3>Available for Withdrawal</h3>
+            <div class="amount">$45,250.00</div>
+        </div>
+
+        <div class="withdraw-methods">
+            <h2>Select Withdrawal Method</h2>
+            <div class="method-grid">
+                <div class="method-card active">
+                    <div class="method-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                            <path d="M7 15h0M2 9.5h20"></path>
+                        </svg>
+                    </div>
+                    <h3>ATM Withdrawal</h3>
+                    <p>Generate ATM code</p>
+                </div>
+                <div class="method-card">
+                    <div class="method-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                            <path d="M9 22V12h6v10"></path>
+                        </svg>
+                    </div>
+                    <h3>Bank Transfer</h3>
+                    <p>To external account</p>
+                </div>
+                <div class="method-card">
+                    <div class="method-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <path d="M12 18h.01"></path>
+                        </svg>
+                    </div>
+                    <h3>Mobile Wallet</h3>
+                    <p>Instant transfer</p>
+                </div>
+                <div class="method-card">
+                    <div class="method-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                            <path d="M1 10h22"></path>
+                        </svg>
+                    </div>
+                    <h3>Debit Card</h3>
+                    <p>Direct to card</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="warning-box">
+            <p>⚠️ <strong>Important:</strong> Daily withdrawal limit is $5,000. Withdrawals cannot be cancelled once processed. Please ensure all details are correct before confirming.</p>
+        </div>
+
+        <div class="form-section">
+            <h2>Withdrawal Details</h2>
+            <form>
+                <div class="form-group">
+                    <label>Quick Select Amount</label>
+                    <div class="quick-amounts">
+                        <button type="button" class="quick-amount-btn">$100</button>
+                        <button type="button" class="quick-amount-btn">$500</button>
+                        <button type="button" class="quick-amount-btn">$1,000</button>
+                        <button type="button" class="quick-amount-btn">$2,000</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">Withdrawal Amount (USD)</label>
+                    <input type="number" id="amount" name="amount" placeholder="0.00" step="0.01" min="10.00" max="5000.00" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="withdrawFrom">Withdraw From Account</label>
+                    <select id="withdrawFrom" name="withdrawFrom" required>
+                        <option value="">Select account</option>
+                        <option value="checking">Checking Account (****1234) - $45,250.00</option>
+                        <option value="savings">Savings Account (****5678) - $12,800.00</option>
+                        <option value="business">Business Account (****9012) - $28,500.00</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="atmLocation">Preferred ATM Location</label>
+                        <select id="atmLocation" name="atmLocation" required>
+                            <option value="">Select location</option>
+                            <option value="downtown">Downtown Branch - Main St</option>
+                            <option value="uptown">Uptown Branch - 5th Ave</option>
+                            <option value="mall">Shopping Mall - Oak Plaza</option>
+                            <option value="airport">Airport Terminal 2</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="securityPin">Security PIN</label>
+                        <input type="password" id="securityPin" name="securityPin" placeholder="Enter 4-digit PIN" maxlength="4" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reason">Reason for Withdrawal (Optional)</label>
+                    <textarea id="reason" name="reason" placeholder="Enter withdrawal reason"></textarea>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Confirm Withdrawal</button>
+                    <button type="button" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        const toggle = document.querySelector('.menu-toggle');
+        const mainContent = document.querySelector('.main-content');
+
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        toggle.classList.toggle('active');
+
+        if (window.innerWidth > 768) {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+    }
+
+    document.querySelectorAll('.sidebar-menu a').forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        });
+    });
+
+    // Method card selection
+    document.querySelectorAll('.method-card').forEach(card => {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.method-card').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // Quick amount buttons
+    document.querySelectorAll('.quick-amount-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const amount = this.textContent.replace('$', '').replace(',', '');
+            document.getElementById('amount').value = amount;
+        });
+    });
+
+    // Form submission
+    document.querySelector('form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const amount = document.getElementById('amount').value;
+        alert(`Withdrawal of $${amount} has been submitted successfully!`);
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - SecureBank</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .register-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            padding: 3rem;
+            animation: slideUp 0.6s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo h1 {
+            color: #2563eb;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo p {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #334155;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.9rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-group input:hover,
+        .form-group select:hover {
+            border-color: #cbd5e1;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 1rem;
+            color: #64748b;
+            position: relative;
+            font-size: 0.9rem;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #64748b;
+        }
+
+        .login-link a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .login-link a:hover {
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+
+        .back-home {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .back-home a {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-home a:hover {
+            color: #2563eb;
+        }
+
+        .password-strength {
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        @media (max-width: 640px) {
+            .register-container {
+                padding: 2rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div th:if="${user_exists}"
+             style="display:block; color:#b91c1c; font-size:0.9rem; margin-bottom:1rem;
+            background:#fee2e2; padding:0.5rem 0.75rem; border-radius:6px;
+            box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <span th:text="${user_exists}"></span>
+        </div>
+
+        <div class="logo">
+            <h1>SecureBank</h1>
+            <p>Create your account to get started</p>
+        </div>
+
+        <form th:object="${user}" th:action="@{/register}" method="post">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <input type="text" th:field="*{fname}" id="firstName" name="firstName" placeholder="John" required>
+                    <span th:if="${#fields.hasErrors('fname')}" th:errors="*{fname}"
+                          style="display:block; color:#ef4444; font-size:0.85rem; margin-top:0.25rem; background:#fee2e2; padding:0.25rem 0.5rem; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    </span>
+                </div>
+                <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" th:field="*{lname}" id="lastName" name="lastName" placeholder="Doe" required>
+                    <span th:if="${#fields.hasErrors('lname')}" th:errors="*{lname}"
+                          style="display:block; color:#ef4444; font-size:0.85rem; margin-top:0.25rem; background:#fee2e2; padding:0.25rem 0.5rem; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" th:field="*{email}" id="email" name="email" placeholder="john.doe@example.com" required>
+                <span th:if="${#fields.hasErrors('email')}" th:errors="*{email}"
+                      style="display:block; color:#ef4444; font-size:0.85rem; margin-top:0.25rem; background:#fee2e2; padding:0.25rem 0.5rem; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    </span>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" th:field="*{phone}" name="phone" placeholder="+1 (555) 123-4567" required>
+                <span th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"
+                      style="display:block; color:#ef4444; font-size:0.85rem; margin-top:0.25rem; background:#fee2e2; padding:0.25rem 0.5rem; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                </span>
+            </div>
+
+            <div class="form-group" style="position:relative;">
+                <label for="password">Password</label>
+                <input type="password" id="password" th:field="*{password}" name="password" placeholder="Enter strong password" required
+                       style="width:100%; padding:0.9rem; border:2px solid #e2e8f0; border-radius:8px; font-size:1rem; transition: all 0.3s ease; background:white;">
+                <div class="password-strength" style="height:6px; background:#e2e8f0; border-radius:4px; margin-top:5px; overflow:hidden;">
+                    <div id="passwordStrengthBar" style="height:100%; width:0%; transition:width 0.3s ease; border-radius:4px;"></div>
+                </div>
+                <span id="passwordStrengthText" style="display:block; margin-top:5px; font-size:0.85rem; font-weight:600;"></span>
+                <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}"
+                      style="display:block; color:#ef4444; font-size:0.85rem; margin-top:0.25rem; background:#fee2e2; padding:0.25rem 0.5rem; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    </span>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" th:field="*{confirmPassword}" name="confirmPassword" placeholder="Re-enter password" required>
+                <div th:if="${fail}"
+                     style="display:block; color:#b91c1c; font-size:0.9rem; margin-bottom:1rem;
+                     background:#fee2e2; padding:0.5rem 0.75rem; border-radius:6px;
+                     box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    <span th:text="${fail}"></span>
+                </div>
+
+            </div>
+
+            <div class="form-group">
+                <label for="accountType">Account Type</label>
+                <select id="accountType" name="accountType" th:field="*{accountType}" required>
+                    <option value="">Select account type</option>
+                    <option value="personal">Personal Account</option>
+                    <option value="business">Business Account</option>
+                    <option value="savings">Savings Account</option>
+                </select>
+                <span th:if="${#fields.hasErrors('accountType')}" th:errors="*{accountType}"
+                      style="display:block; color:#ef4444; font-size:0.85rem; margin-top:0.25rem; background:#fee2e2; padding:0.25rem 0.5rem; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    </span>
+            </div>
+
+            <button type="submit" class="btn-primary">Create Account</button>
+
+            <div class="login-link">
+                Already have an account? <a th:href="@{/login}">Login here</a>
+            </div>
+
+            <div class="back-home">
+                <a th:href="@{/}">← Back to home</a>
+            </div>
+        </form>
+    </div>
+    <script>
+        const passwordInput = document.getElementById('password');
+        const strengthBar = document.getElementById('passwordStrengthBar');
+        const strengthText = document.getElementById('passwordStrengthText');
+
+        passwordInput.addEventListener('input', () => {
+            const val = passwordInput.value;
+            let strength = 0;
+
+            // Basic checks for top companies style
+            if(val.length >= 8) strength += 1; // length
+            if(/[A-Z]/.test(val)) strength += 1; // uppercase
+            if(/[a-z]/.test(val)) strength += 1; // lowercase
+            if(/[0-9]/.test(val)) strength += 1; // number
+            if(/[\W_]/.test(val)) strength += 1; // special character
+
+            // Update bar width and color
+            let width = (strength / 5) * 100;
+            let color = '#ef4444'; // default weak (red)
+            let text = 'Very Weak';
+
+            if(strength === 2) { color = '#f97316'; text='Weak'; }
+            else if(strength === 3) { color = '#eab308'; text='Medium'; }
+            else if(strength === 4) { color = '#22c55e'; text='Strong'; }
+            else if(strength === 5) { color = '#16a34a'; text='Very Strong'; }
+
+            strengthBar.style.width = width + '%';
+            strengthBar.style.backgroundColor = color;
+            strengthText.textContent = text;
+            strengthText.style.color = color;
+        });
+    </script>
+</body>
+</html>

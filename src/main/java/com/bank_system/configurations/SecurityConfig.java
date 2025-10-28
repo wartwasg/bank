@@ -30,11 +30,30 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(authorizeRequests ->
-                authorizeRequests.requestMatchers("/login","/register","/home","/").permitAll());
-        http.authorizeHttpRequests(auth->auth.anyRequest().permitAll());
-        http.formLogin(login -> login.loginPage("/login").usernameParameter("email")
-                .passwordParameter("password").defaultSuccessUrl("/dashboard",true).permitAll());
-        http.sessionManagement(session->session.invalidSessionUrl("/login?timeout"));
+                authorizeRequests
+                        .requestMatchers("/login","/register","/home","/")
+                        .permitAll().requestMatchers("/admin/**")
+                        .hasAuthority("ADMIN")
+                        .requestMatchers("/deposit/**").hasAnyAuthority("AGENT","ADMIN")
+                        .anyRequest()
+                        .authenticated());
+        http.formLogin(login -> login.loginPage("/login")
+                .usernameParameter("email")
+                .passwordParameter("password")
+                .defaultSuccessUrl("/dashboard",true)
+                .permitAll());
+        http.sessionManagement(session->session
+                .invalidSessionUrl("/login?timeout")
+                .maximumSessions(1)
+                .maxSessionsPreventsLogin(false)
+                .expiredUrl("/login?expired"));
+        http.logout(logout-> logout.logoutUrl("/logout")
+                .logoutSuccessUrl("/login?logout=true").invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID")
+                .clearAuthentication(true)
+                .permitAll());
+        http.requiresChannel(channel->channel.anyRequest().requiresSecure());
+        http.headers(header->header.cacheControl(cache->cache.disable()));
         return http.build();
     }
 }

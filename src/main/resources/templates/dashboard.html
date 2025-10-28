@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" th:if="${#authorization.expression('hasAnyAuthority(''ADMIN'',''USER'',''AGENT'')')}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - SecureBank</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,6 +17,43 @@
             background: #f8fafc;
             color: #333;
         }
+        .error-alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            font-size: 14px;
+            z-index: 9999;
+
+            /* Animation */
+            animation: showAndHide 4s ease-in-out forwards;
+        }
+
+        /* Fade-in then fade-out */
+        @keyframes showAndHide {
+            0% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            90% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+
 
         /* Menu Toggle */
         .menu-toggle {
@@ -127,6 +165,7 @@
         .sidebar-logo h2 {
             color: #2563eb;
             font-size: 1.8rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .sidebar-menu {
@@ -137,7 +176,8 @@
             margin-bottom: 0.5rem;
         }
 
-        .sidebar-menu a {
+        .sidebar-menu a,
+        .sidebar-menu .logout-btn {
             display: flex;
             align-items: center;
             gap: 1rem;
@@ -145,26 +185,36 @@
             text-decoration: none;
             color: #64748b;
             font-weight: 500;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             transition: all 0.3s ease;
             position: relative;
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
         }
 
-        .sidebar-menu a:hover {
+        .sidebar-menu a:hover,
+        .sidebar-menu .logout-btn:hover {
             background: #f8fafc;
             color: #2563eb;
         }
 
-        .sidebar-menu a.active {
+        .sidebar-menu a.active,
+        .sidebar-menu .logout-btn.active {
             background: linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, transparent 100%);
             color: #2563eb;
             border-left: 3px solid #2563eb;
         }
 
-        .sidebar-menu a:hover svg {
+        .sidebar-menu a:hover svg,
+        .sidebar-menu .logout-btn:hover svg {
             stroke: #2563eb;
         }
 
-        .sidebar-menu a.active svg {
+        .sidebar-menu a.active svg,
+        .sidebar-menu .logout-btn.active svg {
             stroke: #2563eb;
         }
 
@@ -214,6 +264,7 @@
         .header h1 {
             color: #1e293b;
             font-size: 1.8rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .user-info {
@@ -233,16 +284,19 @@
             color: white;
             font-weight: 600;
             font-size: 1.1rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .user-details h3 {
             color: #1e293b;
             font-size: 1rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .user-details p {
             color: #64748b;
             font-size: 0.85rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         /* Balance Cards */
@@ -308,17 +362,20 @@
             font-weight: 500;
             opacity: 0.9;
             margin-bottom: 1rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .balance-amount {
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .balance-info {
             font-size: 0.85rem;
             opacity: 0.8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .stats-card {
@@ -349,6 +406,7 @@
             font-size: 0.95rem;
             font-weight: 500;
             margin-bottom: 1rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .stat-value {
@@ -356,6 +414,7 @@
             font-weight: 700;
             color: #1e293b;
             margin-bottom: 0.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .stat-change {
@@ -364,6 +423,7 @@
             display: flex;
             align-items: center;
             gap: 0.3rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .stat-change svg {
@@ -373,6 +433,35 @@
 
         .stat-change.negative {
             color: #ef4444;
+        }
+
+        /* Charts Section */
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            animation: slideUp 0.6s ease;
+        }
+
+        .chart-card h3 {
+            color: #1e293b;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
         }
 
         /* Quick Actions */
@@ -395,6 +484,7 @@
             text-decoration: none;
             color: #1e293b;
             font-weight: 600;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             transition: all 0.3s ease;
         }
 
@@ -437,6 +527,7 @@
         .section-header h2 {
             color: #1e293b;
             font-size: 1.4rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .view-all {
@@ -448,6 +539,7 @@
             display: flex;
             align-items: center;
             gap: 0.3rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .view-all:hover {
@@ -533,17 +625,20 @@
             color: #1e293b;
             font-size: 1rem;
             margin-bottom: 0.2rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .transaction-info p {
             color: #64748b;
             font-size: 0.85rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .transaction-amount {
             font-size: 1.1rem;
             font-weight: 700;
             white-space: nowrap;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .transaction-amount.positive {
@@ -562,6 +657,10 @@
 
             .stat-value {
                 font-size: 1.7rem;
+            }
+
+            .charts-section {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -614,272 +713,332 @@
     </style>
 </head>
 <body>
-    <button class="menu-toggle" onclick="toggleSidebar()">
-        <span></span>
-        <span></span>
-        <span></span>
-    </button>
+<div class="error-alert" th:if="${successMessage}">
+    <span th:text="${successMessage}"></span>
+</div>
+<button class="menu-toggle" onclick="toggleSidebar()">
+    <span></span>
+    <span></span>
+    <span></span>
+</button>
 
-    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <aside class="sidebar">
-        <div class="sidebar-logo">
-            <div class="logo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                <path d="M9 22V12h6v10"></path>
+            </svg>
+        </div>
+        <h2>SecureBank</h2>
+    </div>
+    <ul class="sidebar-menu">
+        <li th:if="${#authorization.expression('hasAnyAuthority(''ADMIN'',''USER'',''AGENT'')')}">
+            <a th:href="@{/dashboard}" class="active">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
                     <path d="M9 22V12h6v10"></path>
                 </svg>
-            </div>
-            <h2>SecureBank</h2>
-        </div>
-        <ul class="sidebar-menu">
-            <li>
-                <a th:href="@{/dashboard}" class="active">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
-                        <path d="M9 22V12h6v10"></path>
-                    </svg>
-                    <span>Dashboard</span>
-                </a>
-            </li>
-            <li>
-                <a th:href="@{/transfer}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
-                    </svg>
-                    <span>Transfer</span>
-                </a>
-            </li>
-            <li>
-                <a th:href="@{/deposit}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 8v8M8 12h8"></path>
-                    </svg>
-                    <span>Deposit</span>
-                </a>
-            </li>
-            <li>
-                <a th:href="@{/withdraw}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M8 12h8"></path>
-                    </svg>
-                    <span>Withdraw</span>
-                </a>
-            </li>
-            <li>
-                <a th:href="@{/admin}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                    </svg>
-                    <span>Admin Panel</span>
-                </a>
-            </li>
-            <li>
-                <a th:href="@{/logout}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path>
-                    </svg>
-                    <span>Logout</span>
-                </a>
-            </li>
-        </ul>
-    </aside>
-
-    <main class="main-content">
-        <div class="header">
-            <div>
-                <h1>Dashboard</h1>
-                <p style="color: #64748b; margin-top: 0.3rem;">Welcome back, John Doe</p>
-            </div>
-            <div class="user-info">
-                <div class="user-details">
-                    <h3>John Doe</h3>
-                    <p>john.doe@example.com</p>
-                </div>
-                <div class="user-avatar">JD</div>
-            </div>
-        </div>
-
-        <div class="balance-section">
-            <div class="balance-card">
-                <div class="card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                        <line x1="1" y1="10" x2="23" y2="10"></line>
-                    </svg>
-                </div>
-                <h3>Available Balance</h3>
-                <div class="balance-amount">$45,250.00</div>
-                <div class="balance-info">Account: ****1234</div>
-            </div>
-            <div class="stats-card">
-                <div class="card-icon income">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                        <polyline points="17 6 23 6 23 12"></polyline>
-                    </svg>
-                </div>
-                <h3>Total Income</h3>
-                <div class="stat-value">$12,430.00</div>
-                <div class="stat-change">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="18 15 12 9 6 15"></polyline>
-                    </svg>
-                    +12.5% from last month
-                </div>
-            </div>
-            <div class="stats-card">
-                <div class="card-icon expense">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
-                        <polyline points="17 18 23 18 23 12"></polyline>
-                    </svg>
-                </div>
-                <h3>Total Expenses</h3>
-                <div class="stat-value">$8,240.00</div>
-                <div class="stat-change negative">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="18 9 12 15 6 9"></polyline>
-                    </svg>
-                    +5.2% from last month
-                </div>
-            </div>
-        </div>
-
-        <div class="quick-actions">
-            <a href="transfer.html" class="action-btn">
+                <span>Dashboard</span>
+            </a>
+        </li>
+        <li th:if="${#authorization.expression('hasAnyAuthority(''ADMIN'',''USER'',''AGENT'')')}">
+            <a th:href="@{/transfer}" >
                 <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
                 </svg>
-                Transfer Money
+                <span>Transfer</span>
             </a>
-            <a href="deposit.html" class="action-btn">
+        </li>
+        <li th:if="${#authorization.expression('hasAnyAuthority(''AGENT'',''ADMIN'')')}">
+            <a th:href="@{/deposit}">
                 <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
                     <path d="M12 8v8M8 12h8"></path>
                 </svg>
-                Deposit Funds
+                <span>Deposit</span>
             </a>
-            <a href="withdraw.html" class="action-btn">
+        </li>
+        <li th:if="${#authorization.expression('hasAnyAuthority(''ADMIN'',''USER'',''AGENT'')')}">
+            <a th:href="@{/withdraw}">
                 <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
                     <path d="M8 12h8"></path>
                 </svg>
-                Withdraw Cash
+                <span>Withdraw</span>
+            </a>
+        </li>
+        <li th:if="${#authorization.expression('hasAuthority(''ADMIN'')')}">
+            <a th:href="@{/admin}">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+                <span>Admin Panel</span>
+            </a>
+        </li>
+        <li>
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="logout-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path>
+                    </svg>
+                    <span>Logout</span>
+                </button>
+            </form>
+        </li>
+    </ul>
+</aside>
+
+<main class="main-content">
+    <div class="header">
+        <div>
+            <h1>Dashboard</h1>
+            <p th:text="'Welcome back, '+${username}"
+               style="color: #64748b; margin-top: 0.3rem; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"></p>
+        </div>
+        <div class="user-info">
+            <div class="user-details">
+                <h3 th:text="${username}"></h3>
+                <p th:text="${email}"></p>
+            </div>
+            <div th:text="${avatar}" class="user-avatar"></div>
+        </div>
+    </div>
+
+    <div class="balance-section">
+        <div class="balance-card">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                    <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+            </div>
+            <h3>Available Balance</h3>
+            <div th:text="'$'+${balance}" class="balance-amount"></div>
+            <div th:text="'Account: SB'+${account}" class="balance-info"></div>
+        </div>
+        <div class="stats-card">
+            <div class="card-icon income">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                    <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+            </div>
+            <h3>Total Income</h3>
+            <div th:text="'$'+${income}" class="stat-value">$12,430.00</div>
+            <div class="stat-change">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+                +12.5% from last month
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="card-icon expense">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                    <polyline points="17 18 23 18 23 12"></polyline>
+                </svg>
+            </div>
+            <h3>Total Expenses</h3>
+            <div th:text="'$'+${expenditure}" class="stat-value">$8,240.00</div>
+            <div class="stat-change negative">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="18 9 12 15 6 9"></polyline>
+                </svg>
+                +5.2% from last month
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-section">
+        <div class="chart-card">
+            <h3>Monthly Income vs Expenses</h3>
+            <div class="chart-container">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>Transaction History (October 2025)</h3>
+            <div class="chart-container">
+                <canvas id="transactionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-actions">
+        <a href="transfer.html" class="action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
+            </svg>
+            Transfer Money
+        </a>
+        <a href="deposit.html" class="action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 8v8M8 12h8"></path>
+            </svg>
+            Deposit Funds
+        </a>
+        <a href="withdraw.html" class="action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M8 12h8"></path>
+            </svg>
+            Withdraw Cash
+        </a>
+    </div>
+
+    <div class="transactions-section">
+        <div class="section-header">
+            <h2>Recent Transactions</h2>
+            <a href="#" class="view-all">
+                View All
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
             </a>
         </div>
+        <ul class="transaction-list" th:each="current : ${transactions}">
+            <li class="transaction-item" th:if="${current.type.equals('transfer')}">
+                <div class="transaction-details">
+                    <div class="transaction-icon transfer">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
+                        </svg>
+                    </div>
+                    <div class="transaction-info">
+                        <h4 th:text="${current.description}">Transfer to Family</h4>
+                        <p th:text="${current.date}">October 20, 2025 • 04:30 PM</p>
+                    </div>
+                </div>
+                <div th:text="'-$'+${#numbers.formatDecimal(current.amount,0,'COMMA',2,'POINT')}" class="transaction-amount negative">-$300.00</div>
+            </li>
+            <li class="transaction-item" th:if="${current.type.equals('withdraw')}">
+                <div class="transaction-details">
+                    <div class="transaction-icon withdraw">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="18 9 12 15 6 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="transaction-info">
+                        <h4 th:text="${current.description}">ATM Withdrawal</h4>
+                        <p th:text="${current.date}">October 18, 2025 • 07:20 PM</p>
+                    </div>
+                </div>
+                <div th:text="'-$'+${#numbers.formatDecimal(current.amount,0,'COMMA',2,'POINT')}" class="transaction-amount negative">-$100.00</div>
+            </li>
+            <li class="transaction-item" th:if="${current.type.equals('deposit')}">
+                <div class="transaction-details">
+                    <div class="transaction-icon deposit">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="18 15 12 9 6 15"></polyline>
+                        </svg>
+                    </div>
+                    <div class="transaction-info">
+                        <h4 th:text="${current.description}">Salary Deposit</h4>
+                        <p th:text="${current.date}">October 15, 2025 • 09:30 AM</p>
+                    </div>
+                </div>
+                <div th:text="'+$'+${#numbers.formatDecimal(current.amount,0,'COMMA',2,'POINT')}" class="transaction-amount positive">+$5,200.00</div>
+            </li>
+        </ul>
+    </div>
+</main>
 
-        <div class="transactions-section">
-            <div class="section-header">
-                <h2>Recent Transactions</h2>
-                <a href="#" class="view-all">
-                    View All
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
-                </a>
-            </div>
-            <ul class="transaction-list">
-                <li class="transaction-item">
-                    <div class="transaction-details">
-                        <div class="transaction-icon deposit">
-                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="18 15 12 9 6 15"></polyline>
-                            </svg>
-                        </div>
-                        <div class="transaction-info">
-                            <h4>Salary Deposit</h4>
-                            <p>October 15, 2025 • 09:30 AM</p>
-                        </div>
-                    </div>
-                    <div class="transaction-amount positive">+$5,200.00</div>
-                </li>
-                <li class="transaction-item">
-                    <div class="transaction-details">
-                        <div class="transaction-icon transfer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
-                            </svg>
-                        </div>
-                        <div class="transaction-info">
-                            <h4>Transfer to Sarah Johnson</h4>
-                            <p>October 14, 2025 • 02:15 PM</p>
-                        </div>
-                    </div>
-                    <div class="transaction-amount negative">-$850.00</div>
-                </li>
-                <li class="transaction-item">
-                    <div class="transaction-details">
-                        <div class="transaction-icon withdraw">
-                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="18 9 12 15 6 9"></polyline>
-                            </svg>
-                        </div>
-                        <div class="transaction-info">
-                            <h4>ATM Withdrawal</h4>
-                            <p>October 13, 2025 • 06:45 PM</p>
-                        </div>
-                    </div>
-                    <div class="transaction-amount negative">-$200.00</div>
-                </li>
-                <li class="transaction-item">
-                    <div class="transaction-details">
-                        <div class="transaction-icon deposit">
-                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="18 15 12 9 6 15"></polyline>
-                            </svg>
-                        </div>
-                        <div class="transaction-info">
-                            <h4>Cashback Reward</h4>
-                            <p>October 12, 2025 • 11:20 AM</p>
-                        </div>
-                    </div>
-                    <div class="transaction-amount positive">+$45.50</div>
-                </li>
-                <li class="transaction-item">
-                    <div class="transaction-details">
-                        <div class="transaction-icon transfer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
-                            </svg>
-                        </div>
-                        <div class="transaction-info">
-                            <h4>Transfer to Michael Chen</h4>
-                            <p>October 10, 2025 • 03:30 PM</p>
-                        </div>
-                    </div>
-                    <div class="transaction-amount negative">-$1,200.00</div>
-                </li>
-            </ul>
-        </div>
-    </main>
+<script>
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        const toggle = document.querySelector('.menu-toggle');
+        const mainContent = document.querySelector('.main-content');
 
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            const overlay = document.querySelector('.sidebar-overlay');
-            const toggle = document.querySelector('.menu-toggle');
-            const mainContent = document.querySelector('.main-content');
-            
-            sidebar.classList.toggle('active');
-            overlay.classList.toggle('active');
-            toggle.classList.toggle('active');
-            
-            if (window.innerWidth > 768) {
-                sidebar.classList.toggle('collapsed');
-                mainContent.classList.toggle('expanded');
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        toggle.classList.toggle('active');
+
+        if (window.innerWidth > 768) {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+    }
+
+    document.querySelectorAll('.sidebar-menu a, .sidebar-menu .logout-btn').forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        });
+    });
+
+    // Monthly Income vs Expenses Chart
+
+    let exp = [[${expensesList}]];
+    let income = [[${incomesList}]];
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    const monthlyChart = new Chart(monthlyCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct','Nov','Dec'],
+            datasets: [{
+                label: 'Income',
+                data: income,
+                backgroundColor: '#10b981'
+            }, {
+                label: 'Expenses',
+                data: exp,
+                backgroundColor: '#ef4444'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
             }
         }
+    });
 
-        document.querySelectorAll('.sidebar-menu a').forEach(link => {
-            link.addEventListener('click', function() {
-                if (window.innerWidth <= 768) {
-                    toggleSidebar();
+    // Transaction History Chart (Line Chart for Net Transactions)
+    const transactionCtx = document.getElementById('transactionChart').getContext('2d');
+    const transactionChart = new Chart(transactionCtx, {
+        type: 'line',
+        data: {
+            labels: ['Oct 1', 'Oct 5', 'Oct 10', 'Oct 15', 'Oct 20', 'Oct 22'],
+            datasets: [{
+                label: 'Net Balance Change ($)',
+                data: [0, 500, -200, 5200, -1150, 150],
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
-            });
-        });
-    </script>
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        }
+    });
+</script>
 </body>
 </html>

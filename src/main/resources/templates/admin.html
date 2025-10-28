@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" th:if="${#authorization.expression('hasAnyAuthority(''ADMIN'')')}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - SecureBank</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -15,8 +16,10 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f8fafc;
             color: #333;
+            line-height: 1.6;
         }
 
+        /* Menu Toggle */
         .menu-toggle {
             position: fixed;
             top: 1rem;
@@ -39,6 +42,7 @@
 
         .menu-toggle:hover {
             background: #f8fafc;
+            transform: scale(1.05);
         }
 
         .menu-toggle span {
@@ -61,6 +65,43 @@
             transform: rotate(-45deg) translate(6px, -6px);
         }
 
+        /* Hide Sidebar Button */
+        .hide-sidebar-btn {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 2000;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .hide-sidebar-btn:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+
+        .hide-sidebar-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: #64748b;
+        }
+
+        @media (min-width: 769px) {
+            .hide-sidebar-btn {
+                display: flex;
+            }
+        }
+
+        /* Sidebar Overlay */
         .sidebar-overlay {
             position: fixed;
             top: 0;
@@ -79,6 +120,7 @@
             visibility: visible;
         }
 
+        /* Sidebar */
         .sidebar {
             position: fixed;
             left: 0;
@@ -93,13 +135,14 @@
             overflow-y: auto;
         }
 
-        .sidebar.collapsed {
+        .sidebar.collapsed,
+        .sidebar:not(.active) {
             transform: translateX(-260px);
         }
 
         .sidebar-logo {
             padding: 0 2rem;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
             display: flex;
             align-items: center;
             gap: 0.8rem;
@@ -118,7 +161,7 @@
         .sidebar-logo .logo-icon svg {
             width: 20px;
             height: 20px;
-            stroke: white;
+            fill: white;
         }
 
         .sidebar-logo h2 {
@@ -126,26 +169,49 @@
             font-size: 1.8rem;
         }
 
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-section-title {
+            padding: 0 2rem;
+            color: #64748b;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
         .sidebar-menu {
             list-style: none;
         }
 
         .sidebar-menu li {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
-        .sidebar-menu a {
+        .sidebar-menu a,
+        .sidebar-menu .logout-btn {
             display: flex;
             align-items: center;
             gap: 1rem;
-            padding: 1rem 2rem;
+            padding: 0.9rem 2rem;
             text-decoration: none;
             color: #64748b;
             font-weight: 500;
-            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            position: relative;
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
         }
 
-        .sidebar-menu a:hover {
+        .sidebar-menu a:hover,
+        .sidebar-menu .logout-btn:hover {
             background: #f8fafc;
             color: #2563eb;
         }
@@ -156,53 +222,119 @@
             border-left: 3px solid #2563eb;
         }
 
-        .sidebar-menu a:hover svg {
-            stroke: #2563eb;
-        }
-
-        .sidebar-menu a.active svg {
-            stroke: #2563eb;
-        }
-
         .sidebar-menu svg {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
             flex-shrink: 0;
-            stroke: #64748b;
-            transition: stroke 0.3s ease;
+            transition: fill 0.2s ease;
         }
 
+        /* Main Content */
         .main-content {
             margin-left: 260px;
             padding: 2rem;
             transition: margin-left 0.3s ease;
+            min-height: 100vh;
         }
 
         .main-content.expanded {
             margin-left: 0;
         }
 
+        /* Header */
         .header {
             background: white;
-            padding: 1.5rem 2rem;
+            padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             margin-bottom: 2rem;
         }
 
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
         .header h1 {
-            color: #1e293b;
             font-size: 1.8rem;
-            margin-bottom: 0.3rem;
+            font-weight: 700;
+            color: #1e293b;
         }
 
         .header p {
             color: #64748b;
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
         }
 
-        .admin-stats {
+        .admin-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .admin-badge svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        .header-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .header-stat {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-stat-icon {
+            width: 48px;
+            height: 48px;
+            background: #f8fafc;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-stat-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: #64748b;
+        }
+
+        .header-stat-info h3 {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+        }
+
+        .header-stat-info p {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -212,372 +344,465 @@
             padding: 1.8rem;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            animation: slideUp 0.6s ease;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+            transition: all 0.3s ease;
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .stat-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
         }
 
         .stat-card-header {
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
         }
 
-        .stat-icon {
-            width: 48px;
-            height: 48px;
+        .stat-card-icon {
+            width: 52px;
+            height: 52px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .stat-icon.users {
-            background: #dbeafe;
+        .stat-card-icon svg {
+            width: 26px;
+            height: 26px;
         }
 
-        .stat-icon.users svg {
-            stroke: #2563eb;
+        .stat-card-icon.primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         }
 
-        .stat-icon.transactions {
-            background: #d1fae5;
+        .stat-card-icon.primary svg {
+            fill: white;
         }
 
-        .stat-icon.transactions svg {
-            stroke: #10b981;
+        .stat-card-icon.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         }
 
-        .stat-icon.pending {
-            background: #fef3c7;
+        .stat-card-icon.success svg {
+            fill: white;
         }
 
-        .stat-icon.pending svg {
-            stroke: #f59e0b;
+        .stat-card-icon.danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         }
 
-        .stat-icon.revenue {
-            background: #e9d5ff;
+        .stat-card-icon.danger svg {
+            fill: white;
         }
 
-        .stat-icon.revenue svg {
-            stroke: #8b5cf6;
+        .stat-card-icon.warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         }
 
-        .stat-icon svg {
-            width: 24px;
-            height: 24px;
+        .stat-card-icon.warning svg {
+            fill: white;
         }
 
-        .stat-card h3 {
-            color: #64748b;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #1e293b;
-        }
-
-        .stat-change {
-            font-size: 0.85rem;
-            color: #10b981;
+        .stat-card-trend {
             display: flex;
             align-items: center;
             gap: 0.3rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
 
-        .stat-change svg {
+        .stat-card-trend.up {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .stat-card-trend.down {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .stat-card-trend svg {
             width: 14px;
             height: 14px;
+            fill: currentColor;
         }
 
-        .tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid #e2e8f0;
-            overflow-x: auto;
-        }
-
-        .tab {
-            padding: 1rem 1.5rem;
-            background: none;
-            border: none;
+        .stat-card-body h3 {
+            font-size: 0.9rem;
             color: #64748b;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-bottom: 3px solid transparent;
-            margin-bottom: -2px;
-            white-space: nowrap;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
         }
 
-        .tab:hover {
-            color: #2563eb;
+        .stat-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
         }
 
-        .tab.active {
-            color: #2563eb;
-            border-bottom-color: #2563eb;
+        .stat-card-footer {
+            color: #94a3b8;
+            font-size: 0.85rem;
         }
 
-        .data-table {
+        /* Data Tables */
+        .data-section {
             background: white;
+            padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            overflow: hidden;
+            margin-bottom: 2rem;
         }
 
-        .table-header {
+        .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 2rem;
             flex-wrap: wrap;
             gap: 1rem;
         }
 
-        .table-header h2 {
-            color: #1e293b;
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .section-title svg {
+            width: 24px;
+            height: 24px;
+            fill: #2563eb;
+        }
+
+        .section-title h2 {
             font-size: 1.3rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.7rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
         }
 
         .search-box {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.6rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
+            gap: 0.8rem;
+            padding: 0.7rem 1.2rem;
             background: #f8fafc;
-            flex: 1;
-            max-width: 300px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            min-width: 300px;
         }
 
         .search-box svg {
             width: 18px;
             height: 18px;
-            stroke: #64748b;
+            fill: #94a3b8;
         }
 
         .search-box input {
             border: none;
             background: none;
             outline: none;
-            font-size: 0.95rem;
-            width: 100%;
-        }
-
-        .table-actions {
-            display: flex;
-            gap: 0.8rem;
-            flex-wrap: wrap;
-        }
-
-        .btn-small {
-            padding: 0.6rem 1.2rem;
-            border: none;
-            border-radius: 6px;
             font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            color: #1e293b;
+            flex: 1;
         }
 
-        .btn-small svg {
-            width: 16px;
-            height: 16px;
+        .search-box input::placeholder {
+            color: #94a3b8;
         }
 
-        .btn-add {
-            background: #2563eb;
-            color: white;
-        }
-
-        .btn-add svg {
-            stroke: white;
-        }
-
-        .btn-add:hover {
-            background: #1d4ed8;
-            transform: translateY(-2px);
-        }
-
-        .btn-export {
-            background: white;
-            color: #64748b;
-            border: 2px solid #e2e8f0;
-        }
-
-        .btn-export svg {
-            stroke: #64748b;
-        }
-
-        .btn-export:hover {
-            border-color: #cbd5e1;
-        }
-
-        .table-container {
-            overflow-x: auto;
-        }
-
-        table {
+        /* Table */
+        .data-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
         }
 
-        thead {
+        .data-table thead {
             background: #f8fafc;
         }
 
-        th {
+        .data-table th {
             padding: 1rem 1.5rem;
             text-align: left;
+            font-size: 0.8rem;
             font-weight: 600;
             color: #64748b;
-            font-size: 0.9rem;
             text-transform: uppercase;
-            white-space: nowrap;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0;
         }
 
-        td {
+        .data-table td {
             padding: 1.2rem 1.5rem;
             border-bottom: 1px solid #f1f5f9;
-            color: #334155;
+            font-size: 0.95rem;
         }
 
-        tr:hover {
+        .data-table tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        .data-table tbody tr:hover {
             background: #f8fafc;
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .user-info h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.2rem;
+        }
+
+        .user-info p {
+            font-size: 0.85rem;
+            color: #64748b;
         }
 
         .status-badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.3rem;
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            gap: 0.4rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
             font-weight: 600;
-            white-space: nowrap;
         }
 
-        .status-badge svg {
-            width: 12px;
-            height: 12px;
-        }
-
-        .status-active {
+        .status-badge.active {
             background: #d1fae5;
-            color: #065f46;
+            color: #059669;
         }
 
-        .status-active svg {
-            stroke: #065f46;
-        }
-
-        .status-inactive {
+        .status-badge.inactive {
             background: #fee2e2;
-            color: #991b1b;
+            color: #dc2626;
         }
 
-        .status-inactive svg {
-            stroke: #991b1b;
-        }
-
-        .status-pending {
+        .status-badge.pending {
             background: #fef3c7;
-            color: #92400e;
+            color: #d97706;
         }
 
-        .status-pending svg {
-            stroke: #92400e;
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
         }
 
-        .action-btns {
+        .action-buttons {
             display: flex;
             gap: 0.5rem;
-            flex-wrap: wrap;
         }
 
         .action-btn {
-            padding: 0.4rem 0.8rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
             border: none;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: 0.3rem;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
 
         .action-btn svg {
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
         }
 
-        .btn-edit {
+        .action-btn.edit {
             background: #dbeafe;
-            color: #1e40af;
+            color: #2563eb;
         }
 
-        .btn-edit svg {
-            stroke: #1e40af;
+        .action-btn.edit:hover {
+            background: #2563eb;
+            color: white;
         }
 
-        .btn-edit:hover {
-            background: #bfdbfe;
-        }
-
-        .btn-delete {
+        .action-btn.delete {
             background: #fee2e2;
-            color: #991b1b;
+            color: #dc2626;
         }
 
-        .btn-delete svg {
-            stroke: #991b1b;
+        .action-btn.delete:hover {
+            background: #dc2626;
+            color: white;
         }
 
-        .btn-delete:hover {
-            background: #fecaca;
-        }
-
-        .btn-view {
+        .action-btn.view {
             background: #f3f4f6;
-            color: #374151;
+            color: #6b7280;
         }
 
-        .btn-view svg {
-            stroke: #374151;
+        .action-btn.view:hover {
+            background: #6b7280;
+            color: white;
         }
 
-        .btn-view:hover {
-            background: #e5e7eb;
+        /* Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .chart-header h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .chart-filter {
+            display: flex;
+            gap: 0.5rem;
+            background: #f8fafc;
+            padding: 0.3rem;
+            border-radius: 8px;
+        }
+
+        .chart-filter button {
+            padding: 0.4rem 0.9rem;
+            border: none;
+            background: none;
+            color: #64748b;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chart-filter button.active {
+            background: white;
+            color: #2563eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+
+            .header-stats {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
         }
 
         @media (max-width: 768px) {
+            .menu-toggle {
+                z-index: 2001;
+            }
+
             .sidebar {
-                transform: translateX(-260px);
+                width: 280px;
+                transform: translateX(-280px);
             }
 
             .sidebar.active {
@@ -586,141 +811,140 @@
 
             .main-content {
                 margin-left: 0;
-                padding: 5rem 1rem 1rem 1rem;
+                padding: 4rem 1rem 1rem 1rem;
             }
 
-            .admin-stats {
+            .header-top {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-stats {
                 grid-template-columns: 1fr;
+                gap: 1rem;
             }
 
-            .table-header {
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .search-box {
+                min-width: 100%;
+            }
+
+            .section-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .btn {
+                flex: 1;
+                justify-content: center;
+                min-width: auto;
+            }
+
+            .data-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            .data-table thead,
+            .data-table tbody,
+            .data-table tr {
+                display: block;
+            }
+
+            .data-table th,
+            .data-table td {
+                display: block;
+                text-align: right;
+                border: none;
+                padding: 0.5rem 1rem;
+            }
+
+            .data-table th {
+                background: #f8fafc;
+                font-size: 0.75rem;
+            }
+
+            .data-table td:before {
+                content: attr(data-label) ": ";
+                float: left;
+                font-weight: 600;
+                color: #64748b;
+                min-width: 120px;
+            }
+
+            .data-table td {
+                border-bottom: 1px solid #f1f5f9;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            .action-buttons {
+                justify-content: flex-end;
+            }
+
+            .user-cell {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .sidebar-overlay {
+                display: block;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 3rem 0.5rem 0.5rem 0.5rem;
+            }
+
+            .header,
+            .data-section,
+            .chart-card,
+            .stat-card {
+                padding: 1.5rem;
+                border-radius: 8px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .stat-card-value {
+                font-size: 1.8rem;
+            }
+
+            .chart-container {
+                height: 200px;
+            }
+
+            .section-actions {
                 flex-direction: column;
                 align-items: stretch;
             }
 
+            .btn {
+                justify-content: center;
+            }
+
             .search-box {
-                max-width: 100%;
+                min-width: auto;
             }
 
-            .stat-value {
-                font-size: 1.7rem;
-            }
-
-            table {
-                font-size: 0.85rem;
-            }
-
-            th, td {
-                padding: 0.8rem;
+            .sidebar {
+                width: 100%;
+                max-width: 280px;
             }
         }
 
         @media (min-width: 769px) {
             .sidebar-overlay {
                 display: none;
-            }
-        }
-
-        .footer {
-            background: white;
-            margin-top: 3rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-
-        .footer-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            padding: 2.5rem 2rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .footer-section h3 {
-            color: #2563eb;
-            font-size: 1.2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .footer-section h4 {
-            color: #1e293b;
-            font-size: 0.95rem;
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
-        .footer-section p {
-            color: #64748b;
-            font-size: 0.9rem;
-            line-height: 1.6;
-        }
-
-        .footer-section ul {
-            list-style: none;
-        }
-
-        .footer-section ul li {
-            margin-bottom: 0.6rem;
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-
-        .footer-section ul li a {
-            color: #64748b;
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .footer-section ul li a:hover {
-            color: #2563eb;
-        }
-
-        .footer-bottom {
-            background: #f8fafc;
-            padding: 1.5rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .footer-bottom p {
-            color: #64748b;
-            font-size: 0.85rem;
-            margin: 0;
-        }
-
-        .footer-security {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: #10b981 !important;
-            font-weight: 500;
-        }
-
-        .footer-security svg {
-            width: 16px;
-            height: 16px;
-            stroke: #10b981;
-        }
-
-        @media (max-width: 768px) {
-            .footer-content {
-                grid-template-columns: 1fr;
-                padding: 2rem 1.5rem;
-                gap: 1.5rem;
-            }
-
-            .footer-bottom {
-                flex-direction: column;
-                text-align: center;
-                padding: 1.5rem 1rem;
-            }
-
-            .footer-security {
-                justify-content: center;
             }
         }
     </style>
@@ -731,415 +955,526 @@
     <span></span>
     <span></span>
 </button>
-
 <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-<aside class="sidebar">
+<aside class="sidebar active">
     <div class="sidebar-logo">
         <div class="logo-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
-                <path d="M9 22V12h6v10"></path>
+            <svg viewBox="0 0 24 24">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
             </svg>
         </div>
         <h2>SecureBank</h2>
     </div>
-    <ul class="sidebar-menu">
-        <li>
-            <a th:href="@{/dashboard}">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
-                    <path d="M9 22V12h6v10"></path>
-                </svg>
-                <span>Dashboard</span>
-            </a>
-        </li>
-        <li>
-            <a th:href="@{/transfer}">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
-                </svg>
-                <span>Transfer</span>
-            </a>
-        </li>
-        <li>
-            <a th:href="@{/deposit}">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <path d="M12 8v8M8 12h8"></path>
-                </svg>
-                <span>Deposit</span>
-            </a>
-        </li>
-        <li>
-            <a th:href="@{/withdraw}">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <path d="M8 12h8"></path>
-                </svg>
-                <span>Withdraw</span>
-            </a>
-        </li>
-        <li>
-            <a th:href="@{/admin}" class="active">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                </svg>
-                <span>Admin Panel</span>
-            </a>
-        </li>
-        <li>
-            <a th:href="@{/logout}">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path>
-                </svg>
-                <span>Logout</span>
-            </a>
-        </li>
-    </ul>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Main Menu</div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="#" class="active">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                    <span>User Management</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                    </svg>
+                    <span>Transactions</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                    </svg>
+                    <span>Accounts</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Analytics</div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/>
+                    </svg>
+                    <span>Reports</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                    </svg>
+                    <span>Analytics</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Settings</div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                    </svg>
+                    <span>Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                    <span>Security</span>
+                </a>
+            </li>
+            <li>
+                <button class="logout-btn" onclick="alert('Logout functionality demo - User logged out!')">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                    </svg>
+                    <span>Logout</span>
+                </button>
+            </li>
+        </ul>
+    </div>
 </aside>
 
 <main class="main-content">
+    <!-- Header -->
     <div class="header">
-        <h1>Admin Panel</h1>
-        <p>Manage users, transactions, and system settings</p>
+        <div class="header-top">
+            <div>
+                <h1>Admin Dashboard</h1>
+                <p>Monitor and manage your banking platform</p>
+            </div>
+            <div class="admin-badge">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                </svg>
+                Super Admin
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="header-stat">
+                <div class="header-stat-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                </div>
+                <div class="header-stat-info">
+                    <h3>Total Users</h3>
+                    <p>12,458</p>
+                </div>
+            </div>
+            <div class="header-stat">
+                <div class="header-stat-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                    </svg>
+                </div>
+                <div class="header-stat-info">
+                    <h3>Total Volume</h3>
+                    <p>$2.4M</p>
+                </div>
+            </div>
+            <div class="header-stat">
+                <div class="header-stat-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M13 2.05v3.03c3.39.49 6 3.39 6 6.92 0 .9-.18 1.75-.48 2.54l2.6 1.53c.56-1.24.88-2.62.88-4.07 0-5.18-3.95-9.45-9-9.95zM12 19c-3.87 0-7-3.13-7-7 0-3.53 2.61-6.43 6-6.92V2.05c-5.06.5-9 4.76-9 9.95 0 5.52 4.47 10 9.99 10 3.31 0 6.24-1.61 8.06-4.09l-2.6-1.53C16.17 17.98 14.21 19 12 19z"/>
+                    </svg>
+                </div>
+                <div class="header-stat-info">
+                    <h3>Active Now</h3>
+                    <p>1,429</p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="admin-stats">
+    <!-- Stats Grid -->
+    <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-card-header">
-                <h3>Total Users</h3>
-                <div class="stat-icon users">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"></path>
+                <div class="stat-card-icon primary">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
                     </svg>
                 </div>
-            </div>
-            <div class="stat-value">12,845</div>
-            <div class="stat-change">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="18 15 12 9 6 15"></polyline>
-                </svg>
-                +245 this month
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card-header">
-                <h3>Total Transactions</h3>
-                <div class="stat-icon transactions">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
+                <div class="stat-card-trend up">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M7 14l5-5 5 5z"/>
                     </svg>
+                    +12.5%
                 </div>
             </div>
-            <div class="stat-value">45,392</div>
-            <div class="stat-change">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="18 15 12 9 6 15"></polyline>
-                </svg>
-                +1,284 today
+            <div class="stat-card-body">
+                <h3>New Users</h3>
+                <div class="stat-card-value">1,284</div>
+                <div class="stat-card-footer">+156 from last month</div>
             </div>
         </div>
+
         <div class="stat-card">
             <div class="stat-card-header">
+                <div class="stat-card-icon success">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <div class="stat-card-trend up">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M7 14l5-5 5 5z"/>
+                    </svg>
+                    +8.2%
+                </div>
+            </div>
+            <div class="stat-card-body">
+                <h3>Completed Transactions</h3>
+                <div class="stat-card-value">45,328</div>
+                <div class="stat-card-footer">+3,421 from last month</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <div class="stat-card-icon warning">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                    </svg>
+                </div>
+                <div class="stat-card-trend down">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                    -3.1%
+                </div>
+            </div>
+            <div class="stat-card-body">
                 <h3>Pending Approvals</h3>
-                <div class="stat-icon pending">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 6v6l4 2"></path>
-                    </svg>
-                </div>
-            </div>
-            <div class="stat-value">127</div>
-            <div class="stat-change" style="color: #f59e0b;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                Requires attention
+                <div class="stat-card-value">248</div>
+                <div class="stat-card-footer">-8 from yesterday</div>
             </div>
         </div>
+
         <div class="stat-card">
             <div class="stat-card-header">
-                <h3>Total Revenue</h3>
-                <div class="stat-icon revenue">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                        <polyline points="17 6 23 6 23 12"></polyline>
+                <div class="stat-card-icon danger">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
                     </svg>
                 </div>
+                <div class="stat-card-trend down">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                    -15.3%
+                </div>
             </div>
-            <div class="stat-value">$2.4M</div>
-            <div class="stat-change">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="18 15 12 9 6 15"></polyline>
-                </svg>
-                +18.5% this quarter
+            <div class="stat-card-body">
+                <h3>Fraud Alerts</h3>
+                <div class="stat-card-value">12</div>
+                <div class="stat-card-footer">-3 from last week</div>
             </div>
         </div>
     </div>
 
-    <div class="tabs">
-        <button class="tab active">Users Management</button>
-        <button class="tab">Transactions</button>
-        <button class="tab">Reports</button>
-        <button class="tab">Settings</button>
+    <!-- Charts -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Transaction Volume</h3>
+                <div class="chart-filter">
+                    <button class="active">7D</button>
+                    <button>1M</button>
+                    <button>3M</button>
+                    <button>1Y</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="volumeChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>User Growth</h3>
+                <div class="chart-filter">
+                    <button class="active">7D</button>
+                    <button>1M</button>
+                    <button>3M</button>
+                    <button>1Y</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="growthChart"></canvas>
+            </div>
+        </div>
     </div>
 
-    <div class="data-table">
-        <div class="table-header">
-            <h2>All Users</h2>
-            <div class="table-actions">
+    <!-- User Management Table -->
+    <div class="data-section">
+        <div class="section-header">
+            <div class="section-title">
+                <svg viewBox="0 0 24 24">
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+                <h2>User Management</h2>
+            </div>
+            <div class="section-actions">
                 <div class="search-box">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="M21 21l-4.35-4.35"></path>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
                     </svg>
                     <input type="text" placeholder="Search users...">
                 </div>
-                <button class="btn-small btn-export">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
+                <button class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
                     </svg>
-                    Export
+                    Filter
                 </button>
-                <button class="btn-small btn-add">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 8v8M8 12h8"></path>
+                <button class="btn btn-primary" onclick="alert('Add User demo - Redirecting to form...')">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                     </svg>
                     Add User
                 </button>
             </div>
         </div>
-        <div class="table-container">
-            <table>
-                <thead>
-                <tr>
-                    <th>User ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Account Type</th>
-                    <th>Balance</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td>#USR-001234</td>
-                    <td>John Doe</td>
-                    <td>john.doe@example.com</td>
-                    <td>Personal</td>
-                    <td>$45,250.00</td>
-                    <td>
-                                <span class="status-badge status-active">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path>
-                                        <path d="M22 4L12 14.01l-3-3"></path>
-                                    </svg>
-                                    Active
-                                </span>
-                    </td>
-                    <td>
-                        <div class="action-btns">
-                            <button class="action-btn btn-view">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
-                                View
-                            </button>
-                            <button class="action-btn btn-edit">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                                Edit
-                            </button>
-                            <button class="action-btn btn-delete">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                                </svg>
-                                Delete
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>#USR-001236</td>
-                    <td>Michael Chen</td>
-                    <td>m.chen@example.com</td>
-                    <td>Savings</td>
-                    <td>$67,890.00</td>
-                    <td>
-                                <span class="status-badge status-active">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path>
-                                        <path d="M22 4L12 14.01l-3-3"></path>
-                                    </svg>
-                                    Active
-                                </span>
-                    </td>
-                    <td>
-                        <div class="action-btns">
-                            <button class="action-btn btn-view">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
-                                View
-                            </button>
-                            <button class="action-btn btn-edit">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                                Edit
-                            </button>
-                            <button class="action-btn btn-delete">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                                </svg>
-                                Delete
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>#USR-001237</td>
-                    <td>Emily Davis</td>
-                    <td>emily.davis@example.com</td>
-                    <td>Personal</td>
-                    <td>$12,340.00</td>
-                    <td>
-                                <span class="status-badge status-pending">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <path d="M12 6v6l4 2"></path>
-                                    </svg>
-                                    Pending
-                                </span>
-                    </td>
-                    <td>
-                        <div class="action-btns">
-                            <button class="action-btn btn-view">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
-                                View
-                            </button>
-                            <button class="action-btn btn-edit">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                                Edit
-                            </button>
-                            <button class="action-btn btn-delete">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                                </svg>
-                                Delete
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>#USR-001238</td>
-                    <td>James Wilson</td>
-                    <td>james.w@example.com</td>
-                    <td>Business</td>
-                    <td>$89,560.00</td>
-                    <td>
-                                <span class="status-badge status-inactive">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="15" y1="9" x2="9" y2="15"></line>
-                                        <line x1="9" y1="9" x2="15" y2="15"></line>
-                                    </svg>
-                                    Inactive
-                                </span>
-                    </td>
-                    <td>
-                        <div class="action-btns">
-                            <button class="action-btn btn-view">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
-                                View
-                            </button>
-                            <button class="action-btn btn-edit">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                                Edit
-                            </button>
-                            <button class="action-btn btn-delete">
-                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                                </svg>
-                                Delete
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3>SecureBank Admin</h3>
-                <p>Professional banking management system</p>
-            </div>
-            <div class="footer-section">
-                <h4>Quick Links</h4>
-                <ul>
-                    <li><a href="#">Documentation</a></li>
-                    <li><a href="#">Support</a></li>
-                    <li><a href="#">API Reference</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h4>Contact</h4>
-                <ul>
-                    <li>Email: admin@securebank.com</li>
-                    <li>Phone: +1 (555) 123-4567</li>
-                    <li>Available 24/7</li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h4>Legal</h4>
-                <ul>
-                    <li><a href="#">Privacy Policy</a></li>
-                    <li><a href="#">Terms of Service</a></li>
-                    <li><a href="#">Compliance</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <p>&copy; 2024 SecureBank. All rights reserved. | Version 2.5.1</p>
-            <p class="footer-security">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0110 0v4"></path>
-                </svg>
-                Secured by 256-bit SSL encryption
-            </p>
-        </div>
-    </footer>
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>User</th>
+                <th>Account</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td data-label="User">
+                    <div class="user-cell">
+                        <div class="user-avatar">JD</div>
+                        <div class="user-info">
+                            <h4>John Doe</h4>
+                            <p>john.doe@email.com</p>
+                        </div>
+                    </div>
+                </td>
+                <td data-label="Account">SB10012345</td>
+                <td data-label="Balance">$12,450.00</td>
+                <td data-label="Status">
+                            <span class="status-badge active">
+                                <span class="status-dot"></span>
+                                Active
+                            </span>
+                </td>
+                <td data-label="Joined">Jan 15, 2024</td>
+                <td data-label="Actions">
+                    <div class="action-buttons">
+                        <button class="action-btn view" title="View" onclick="alert('View user demo - User details loaded!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn edit" title="Edit" onclick="alert('Edit user demo - Form opened!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete" title="Delete" onclick="return confirm('Delete demo - User deleted!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td data-label="User">
+                    <div class="user-cell">
+                        <div class="user-avatar">SM</div>
+                        <div class="user-info">
+                            <h4>Sarah Miller</h4>
+                            <p>sarah.m@email.com</p>
+                        </div>
+                    </div>
+                </td>
+                <td data-label="Account">SB10012346</td>
+                <td data-label="Balance">$8,920.50</td>
+                <td data-label="Status">
+                            <span class="status-badge active">
+                                <span class="status-dot"></span>
+                                Active
+                            </span>
+                </td>
+                <td data-label="Joined">Feb 22, 2024</td>
+                <td data-label="Actions">
+                    <div class="action-buttons">
+                        <button class="action-btn view" title="View" onclick="alert('View user demo - User details loaded!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn edit" title="Edit" onclick="alert('Edit user demo - Form opened!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete" title="Delete" onclick="return confirm('Delete demo - User deleted!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td data-label="User">
+                    <div class="user-cell">
+                        <div class="user-avatar">RJ</div>
+                        <div class="user-info">
+                            <h4>Robert Johnson</h4>
+                            <p>r.johnson@email.com</p>
+                        </div>
+                    </div>
+                </td>
+                <td data-label="Account">SB10012347</td>
+                <td data-label="Balance">$24,350.75</td>
+                <td data-label="Status">
+                            <span class="status-badge pending">
+                                <span class="status-dot"></span>
+                                Pending
+                            </span>
+                </td>
+                <td data-label="Joined">Mar 10, 2024</td>
+                <td data-label="Actions">
+                    <div class="action-buttons">
+                        <button class="action-btn view" title="View" onclick="alert('View user demo - User details loaded!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn edit" title="Edit" onclick="alert('Edit user demo - Form opened!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete" title="Delete" onclick="return confirm('Delete demo - User deleted!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td data-label="User">
+                    <div class="user-cell">
+                        <div class="user-avatar">ED</div>
+                        <div class="user-info">
+                            <h4>Emily Davis</h4>
+                            <p>emily.d@email.com</p>
+                        </div>
+                    </div>
+                </td>
+                <td data-label="Account">SB10012348</td>
+                <td data-label="Balance">$5,670.00</td>
+                <td data-label="Status">
+                            <span class="status-badge inactive">
+                                <span class="status-dot"></span>
+                                Inactive
+                            </span>
+                </td>
+                <td data-label="Joined">Apr 5, 2024</td>
+                <td data-label="Actions">
+                    <div class="action-buttons">
+                        <button class="action-btn view" title="View" onclick="alert('View user demo - User details loaded!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn edit" title="Edit" onclick="alert('Edit user demo - Form opened!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete" title="Delete" onclick="return confirm('Delete demo - User deleted!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td data-label="User">
+                    <div class="user-cell">
+                        <div class="user-avatar">MW</div>
+                        <div class="user-info">
+                            <h4>Michael Wilson</h4>
+                            <p>m.wilson@email.com</p>
+                        </div>
+                    </div>
+                </td>
+                <td data-label="Account">SB10012349</td>
+                <td data-label="Balance">$15,200.00</td>
+                <td data-label="Status">
+                            <span class="status-badge active">
+                                <span class="status-dot"></span>
+                                Active
+                            </span>
+                </td>
+                <td data-label="Joined">May 12, 2024</td>
+                <td data-label="Actions">
+                    <div class="action-buttons">
+                        <button class="action-btn view" title="View" onclick="alert('View user demo - User details loaded!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn edit" title="Edit" onclick="alert('Edit user demo - Form opened!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete" title="Delete" onclick="return confirm('Delete demo - User deleted!')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
 </main>
 
 <script>
+    // Important JS: Sidebar Toggle
     function toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
         const overlay = document.querySelector('.sidebar-overlay');
@@ -1156,12 +1491,63 @@
         }
     }
 
-    document.querySelectorAll('.sidebar-menu a').forEach(link => {
-        link.addEventListener('click', function() {
+    // Auto-hide sidebar on desktop after menu click
+    document.querySelectorAll('.sidebar-menu a, .sidebar-menu .logout-btn').forEach(link => {
+        link.addEventListener('click', function(e) {
+            if (window.innerWidth > 768 && this.classList.contains('active')) {
+                hideSidebar();
+            }
             if (window.innerWidth <= 768) {
                 toggleSidebar();
             }
         });
+    });
+
+    // Charts with dummy data
+    const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+    new Chart(volumeCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Volume ($)',
+                data: [12000, 19000, 15000, 22000, 18000, 14000, 21000],
+                backgroundColor: '#3b82f6'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    const growthCtx = document.getElementById('growthChart').getContext('2d');
+    new Chart(growthCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'New Users',
+                data: [1000, 1200, 1500, 1800, 2100, 2500],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    // Resize listener for responsiveness
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            document.querySelector('.sidebar-overlay').classList.remove('active');
+            document.querySelector('.menu-toggle').classList.remove('active');
+        }
     });
 </script>
 </body>

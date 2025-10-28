@@ -5,8 +5,10 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -23,12 +25,15 @@ public class User implements UserDetails {
     private String lname;
     private String phone;
     private String accountType;
+    @Column(unique = true)
+    private String accountNumber;
     private String password;
+    @Column(unique = true)
     private String email;
     private String role;
     private double balance;
 
-    public User(String username,String fname,String lname, String password, String email,String phone, String role,String accountType, double balance) {
+    public User(String username,String fname,String lname, String password, String email,String phone, String role,String accountType,String AccountNumber, double balance) {
         this.username = username;
         this.password = password;
         this.email = email;
@@ -38,11 +43,12 @@ public class User implements UserDetails {
         this.lname = lname;
         this.phone = phone;
         this.accountType = accountType;
+        this.accountNumber = AccountNumber;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        return List.of(new SimpleGrantedAuthority(role));
     }
 
     @Override
@@ -64,4 +70,6 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return UserDetails.super.isEnabled();
     }
+    @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
+    List<Transaction> transactions = new ArrayList<>();
 }

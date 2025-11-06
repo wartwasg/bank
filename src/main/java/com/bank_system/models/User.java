@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -31,6 +32,7 @@ public class User implements UserDetails {
     @Column(unique = true)
     private String email;
     private String role;
+    private Date createdDate = new Date();
     private double balance;
 
     public User(String username,String fname,String lname, String password, String email,String phone, String role,String accountType,String AccountNumber, double balance) {
@@ -72,4 +74,6 @@ public class User implements UserDetails {
     }
     @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
     List<Transaction> transactions = new ArrayList<>();
+    @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
+    List<Deposits> deposits = new ArrayList<>();
 }

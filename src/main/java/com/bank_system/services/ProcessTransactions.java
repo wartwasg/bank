@@ -20,7 +20,6 @@ public class ProcessTransactions {
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
     }
-
     public void save(Transaction transaction, User user) {
 
         transaction.setS_account(user.getAccountNumber());
@@ -71,8 +70,8 @@ public class ProcessTransactions {
         status.put("expenditure",expenditure);
         return status;
     }
-    public List<Transaction> getPastTransactions(String SenderAccount,String ReceiverAccount) {
-        List<Transaction> historyOfTransactions = transactionRepository.getTransactionsHistory(SenderAccount,ReceiverAccount);
+    public List<Transaction> getPastTransactions(User user) {
+        List<Transaction> historyOfTransactions = transactionRepository.getTransactionsHistory(user.getId());
         return historyOfTransactions.isEmpty() ? null : historyOfTransactions;
     }
 }

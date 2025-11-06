@@ -31,7 +31,7 @@ public class DashboardController {
            session.setAttribute("user",user);
            HashMap<String,List<Double>> MonthlyData = processTransactions.getUSerExpenditureAndIncome(user.getAccountNumber(),"withdraw","transfer","deposit");
            HashMap<String,Double> expenditure = loginAndRegisterService.getExpenditure(email);
-           List<Transaction> userTransactions = processTransactions.getPastTransactions(user.getAccountNumber(), user.getAccountNumber());
+           List<Transaction> userTransactions = processTransactions.getPastTransactions(user);
            model.addAttribute("username",user.getUsername());
            model.addAttribute("email",user.getEmail());
            model.addAttribute("avatar",String.valueOf(user.getFname().charAt(0))+String.valueOf(user.getLname().charAt(0)));

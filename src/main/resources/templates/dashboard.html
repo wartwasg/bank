@@ -832,7 +832,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="18 15 12 9 6 15"></polyline>
                 </svg>
-                +12.5% from last month
+                + from last month
             </div>
         </div>
         <div class="stats-card">
@@ -848,7 +848,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="18 9 12 15 6 9"></polyline>
                 </svg>
-                +5.2% from last month
+                + from last month
             </div>
         </div>
     </div>
@@ -869,20 +869,20 @@
     </div>
 
     <div class="quick-actions">
-        <a href="transfer.html" class="action-btn">
+        <a th:href="@{/transfer}" class="action-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
             </svg>
             Transfer Money
         </a>
-        <a href="deposit.html" class="action-btn">
+        <a th:href="@{/deposit}" th:if="${#authorization.expression('hasAnyAuthority(''ADMIN'',''AGENT'')')}" class="action-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <path d="M12 8v8M8 12h8"></path>
             </svg>
             Deposit Funds
         </a>
-        <a href="withdraw.html" class="action-btn">
+        <a th:href="@{/withdraw}" class="action-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <path d="M8 12h8"></path>
